@@ -1,0 +1,81 @@
+Understanding BlockPortal's Reverse Proxy Implementation
+
+1. What is a Reverse Proxy?
+------------------------
+A reverse proxy is a server that sits between client devices (browsers/apps) and a backend server. 
+In BlockPortal:
+- Clients connect to proxy (port 3000)
+- Proxy forwards to backend (port 8081)
+- Backend responses return through proxy
+
+Flow: Client -> [Port 3000] -> Proxy -> [Port 8081] -> Backend Server
+
+2. How BlockPortal Sets Up the Proxy
+--------------------------------
+a) Backend Server (simple/main.go):
+   - Simple HTTP server on port 8081
+   - Returns "Hello, World!"
+   - No security features
+
+b) Proxy Server (main.go):
+   - Listens on port 3000
+   - Uses http.ReverseProxy
+   - Adds security layers:
+     * Rate limiting
+     * Pattern detection
+     * Payload size checks
+
+3. Request Flow Example
+-------------------
+1. Client sends: http://localhost:3000/
+2. Proxy receives request
+3. Security checks:
+   - Check IP isn't blacklisted
+   - Check rate limit
+   - Check request patterns
+   - Check payload size
+4. If passes: Forward to http://localhost:8081/
+5. Backend processes request
+6. Response returns through same path
+
+4. Port Forwarding Details
+----------------------
+- Original Request:
+  URL: http://localhost:3000/
+  Headers: {original client headers}
+
+- Transformed Request:
+  URL: http://localhost:8081/
+  Headers: {original + proxy headers}
+
+5. Why Use Port 3000 -> 8081?
+--------------------------
+- Port 3000: Common for development servers
+- Port 8081: Alternative to 8080 (often in use)
+- Separation allows:
+  * Independent scaling
+  * Security isolation
+  * Easy maintenance
+
+6. Testing the Flow
+----------------
+1. Start backend:
+   cd simple
+   go run main.go
+   (Listens on 8081)
+
+2. Start proxy:
+   ./blockportal -url localhost:8081
+   (Listens on 3000)
+
+3. Access:
+   - Direct backend: http://localhost:8081
+   - Through proxy: http://localhost:3000
+   (Same content, but proxy adds protection)
+
+7. Benefits of This Setup
+---------------------
+1. Security: Add protection without changing backend
+2. Monitoring: Track all requests centrally
+3. Control: Rate limiting and blacklisting
+4. Flexibility: Can change backend without affecting clients
